@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mining Events Database 2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232636;
+      --border: #2e3248;
+      --accent: #f5a623;
+      --accent2: #4f8ef7;
+      --green: #3ecf8e;
+      --red: #f16c6c;
+      --text: #e8eaf0;
+      --muted: #7b82a0;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+
+    /* ── Layout ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 18px 28px; display: flex; align-items: center; gap: 14px; }
+    header .icon { font-size: 28px; }
+    header h1 { font-size: 20px; font-weight: 700; color: var(--accent); }
+    header p  { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .badge { background: var(--accent); color: #000; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: auto; }
+
+    main { max-width: 1400px; margin: 0 auto; padding: 24px 20px; }
+
+    /* ── Stat cards ── */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+    .stat-card .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat-card .value { font-size: 30px; font-weight: 700; margin-top: 4px; }
+    .stat-card .sub   { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .c-accent  { color: var(--accent); }
+    .c-green   { color: var(--green); }
+    .c-blue    { color: var(--accent2); }
+    .c-red     { color: var(--red); }
+    .c-muted   { color: var(--muted); }
+
+    /* ── Charts row ── */
+    .charts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+    @media (max-width: 900px) { .charts { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .charts { grid-template-columns: 1fr; } }
+    .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .chart-card h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 14px; }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* ── Timeline ── */
+    .section-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+    .timeline { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 24px; overflow-x: auto; }
+    .tl-grid { display: grid; grid-template-columns: repeat(12, minmax(80px, 1fr)); gap: 6px; min-width: 900px; }
+    .tl-month { text-align: center; }
+    .tl-month-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+    .tl-event { font-size: 10px; background: var(--surface2); border-radius: 4px; padding: 4px 6px; margin-bottom: 4px; border-left: 3px solid var(--accent); cursor: pointer; transition: opacity .15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-event:hover { opacity: .8; }
+    .tl-event.past { border-left-color: var(--muted); opacity: .55; }
+    .tl-event.type-investment { border-left-color: var(--accent); }
+    .tl-event.type-technical  { border-left-color: var(--accent2); }
+    .tl-event.type-trade      { border-left-color: var(--green); }
+    .tl-event.type-congress   { border-left-color: #c084fc; }
+
+    /* ── Filters ── */
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center; }
+    .filters input, .filters select { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 7px 12px; font-size: 13px; outline: none; }
+    .filters input:focus, .filters select:focus { border-color: var(--accent2); }
+    .filters input { flex: 1; min-width: 180px; }
+    .filter-count { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+    /* ── Table ── */
+    .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); cursor: pointer; user-select: none; white-space: nowrap; }
+    thead th:hover { color: var(--text); }
+    thead th .sort-icon { margin-left: 4px; opacity: .4; }
+    thead th.sorted .sort-icon { opacity: 1; color: var(--accent); }
+    tbody tr { border-top: 1px solid var(--border); transition: background .1s; cursor: pointer; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 10px 14px; vertical-align: top; }
+    td.name-cell { font-weight: 600; max-width: 260px; }
+    td.name-cell .event-name { white-space: normal; line-height: 1.4; }
+    td.name-cell .event-type { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .pill { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; margin: 1px; background: var(--surface2); border: 1px solid var(--border); }
+    .pill.past     { border-color: var(--muted);  color: var(--muted); }
+    .pill.upcoming { border-color: var(--green);  color: var(--green); }
+    .region-pill { background: var(--surface2); border: 1px solid var(--border); }
+    .date-cell { white-space: nowrap; color: var(--muted); font-size: 12px; }
+    .loc-cell  { font-size: 12px; }
+
+    /* ── Modal ── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 100; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; max-width: 580px; width: 95%; padding: 28px; position: relative; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 17px; line-height: 1.4; margin-bottom: 6px; }
+    .modal .modal-type { color: var(--muted); font-size: 12px; margin-bottom: 18px; }
+    .modal .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .modal .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .modal .field p { margin-top: 3px; font-size: 13px; }
+    .modal .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .modal .close-btn { position: absolute; top: 16px; right: 16px; background: var(--surface2); border: none; color: var(--muted); width: 28px; height: 28px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .modal .close-btn:hover { color: var(--text); }
+    .modal a { color: var(--accent2); text-decoration: none; font-size: 12px; }
+    .modal a:hover { text-decoration: underline; }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* ── Pagination ── */
+    .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+    .pagination button { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 5px 11px; cursor: pointer; font-size: 12px; }
+    .pagination button.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+    .pagination button:hover:not(.active) { border-color: var(--accent2); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="icon">⛏️</span>
+  <div>
+    <h1>Mining Events Database</h1>
+    <p>Upcoming mining conferences, exhibitions, and symposiums • 2026</p>
+  </div>
+  <span class="badge" id="badge-total">48 Events</span>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="stats" id="stat-cards"></div>
+
+  <!-- Charts -->
+  <div class="charts">
+    <div class="chart-card">
+      <h3>Events by Region</h3>
+      <div class="chart-wrap"><canvas id="chartRegion"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Events by Month</h3>
+      <div class="chart-wrap"><canvas id="chartMonth"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Top Commodities</h3>
+      <div class="chart-wrap"><canvas id="chartCommodity"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="section-title" style="margin-bottom:10px">2026 Event Timeline</div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Investment</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div> Technical</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Trade/Expo</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#c084fc"></div> Congress</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--muted)"></div> Past</div>
+    </div>
+    <div class="tl-grid" id="timeline"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="section-title">All Events</div>
+  <div class="filters">
+    <input type="search" id="search" placeholder="Search events, cities, organizers…" />
+    <select id="filterRegion"><option value="">All Regions</option></select>
+    <select id="filterType"><option value="">All Types</option></select>
+    <select id="filterStatus"><option value="">All Statuses</option><option value="upcoming">Upcoming</option><option value="past">Past</option></select>
+    <select id="filterCommodity"><option value="">All Commodities</option></select>
+    <span class="filter-count" id="filter-count"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead id="table-head"></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+
+</main>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="close-btn" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const DB = {"metadata":{"title":"Mining Events Database","description":"Upcoming mining conferences, exhibitions, and symposiums","last_updated":"2026-03-12","total_events":54,"source":"Publicly available event websites"},"events":[{"id":1,"name":"Vancouver Resource Investment Conference (VRIC) 2026","type":"Conference / Investment Forum","start_date":"2026-01-25","end_date":"2026-01-26","city":"Vancouver","country":"Canada","venue":"Vancouver Convention Centre","organizer":"Cambridge House International","website":"https://cambridgehouse.com/vancouver-resource-investment-conference","focus":["investment","critical minerals","exploration"],"commodities":["gold","silver","critical minerals"],"region":"North America","status":"past"},{"id":2,"name":"AME Roundup 2026","type":"Conference + Trade Show","start_date":"2026-01-26","end_date":"2026-01-29","city":"Vancouver","country":"Canada","venue":"Vancouver Convention Centre","organizer":"Association for Mineral Exploration (AME)","website":"https://roundup.amebc.ca","focus":["mineral exploration","investment","critical minerals"],"commodities":["critical minerals","gold","copper"],"region":"North America","status":"past"},{"id":3,"name":"Mining Indaba 2026","type":"Conference / Investment Forum","start_date":"2026-02-09","end_date":"2026-02-12","city":"Cape Town","country":"South Africa","venue":"Cape Town International Convention Centre (CTICC)","organizer":"Investing in African Mining Indaba","website":"https://miningindaba.com","focus":["African mining","investment","sustainability","critical minerals"],"commodities":["gold","copper","cobalt","critical minerals"],"region":"Africa","status":"past"},{"id":4,"name":"SME MINEXCHANGE 2026 Annual Conference & Expo","type":"Conference + Expo","start_date":"2026-02-22","end_date":"2026-02-25","city":"Salt Lake City","country":"USA","venue":"Salt Palace Convention Center","organizer":"Society for Mining, Metallurgy & Exploration (SME)","website":"https://smeannualconference.org","focus":["mining technology","sustainability","autonomous operations","mineral processing"],"commodities":["all"],"region":"North America","status":"past"},{"id":5,"name":"PDAC 2026","type":"Convention + Trade Show","start_date":"2026-03-01","end_date":"2026-03-04","city":"Toronto","country":"Canada","venue":"Metro Toronto Convention Centre","organizer":"Prospectors & Developers Association of Canada (PDAC)","website":"https://pdac.ca/convention-2026","focus":["mineral exploration","investment","critical minerals","geoscience"],"commodities":["all"],"region":"North America","attendance":32155,"exhibitors":1300,"status":"past"},{"id":6,"name":"SAIMM Tailings 2026 Conference","type":"Conference","start_date":"2026-03-03","end_date":"2026-03-05","city":"Fourways","country":"South Africa","venue":"Indaba Hotel, Spa and Conference Centre","organizer":"Southern African Institute of Mining and Metallurgy (SAIMM)","website":"https://www.saimm.co.za/saimm-events/upcoming-events/tailings-2026-conference","focus":["tailings management","geotechnical","environmental","mine waste"],"commodities":["all"],"region":"Africa","status":"past"},{"id":7,"name":"Mining World Congress 2026","type":"Congress / Conference","start_date":"2026-06-03","end_date":"2026-06-04","city":"London","country":"United Kingdom","venue":"London","organizer":"Mining Conferences International","website":"https://miningconferences.org","focus":["exploration","critical minerals","investment","AI in mining"],"commodities":["all"],"region":"Europe","status":"upcoming"},{"id":8,"name":"Mining Forum Europe 2026","type":"Investment Forum","start_date":"2026-04-13","end_date":"2026-04-15","city":"Zurich","country":"Switzerland","venue":"Park Hyatt Zürich","organizer":"Denver Gold Group","website":"https://europe.miningforum.com","focus":["precious metals investment","gold equities","silver equities"],"commodities":["gold","silver"],"region":"Europe","status":"upcoming"},{"id":9,"name":"CRU World Copper Conference 2026","type":"Conference","start_date":"2026-04-13","end_date":"2026-04-15","city":"Santiago","country":"Chile","venue":"The W Hotel","organizer":"CRU Group","website":"https://events.crugroup.com/copper/home","focus":["copper market intelligence","supply chain","pricing"],"commodities":["copper"],"region":"Latin America","status":"upcoming"},{"id":10,"name":"Resourcing Tomorrow Hong Kong 2026","type":"Investment Conference","start_date":"2026-04-16","end_date":"2026-04-17","city":"Hong Kong","country":"China (SAR)","venue":"Four Seasons Hotel","organizer":"Resourcing Tomorrow / Mines and Money","website":"https://resourcingtomorrow.com/hongkong","focus":["mining investment","critical minerals","Asian capital","battery metals"],"commodities":["gold","critical minerals","battery metals"],"region":"Asia","status":"upcoming"},{"id":11,"name":"14th International Mining Geology Conference","type":"Technical Conference","start_date":"2026-04-21","end_date":"2026-04-22","city":"Brisbane","country":"Australia","venue":"Brisbane Convention and Exhibition Centre","organizer":"AusIMM","website":"https://www.ausimm.com/conferences-and-events/mining-geology","focus":["mining geology","orebody knowledge","geological innovation"],"commodities":["all"],"region":"Asia-Pacific","status":"upcoming"},{"id":12,"name":"MiningWorld Russia 2026","type":"Exhibition + Conference","start_date":"2026-04-22","end_date":"2026-04-24","city":"Krasnogorsk (Moscow)","country":"Russia","venue":"Crocus Expo IEC","organizer":"ITE Group","website":"https://miningworldexpo.com","focus":["mining machinery","mineral exploration technology","automation","digitalisation"],"commodities":["all"],"region":"Europe","notes":"30th edition","status":"upcoming"},{"id":13,"name":"EXPOCOBRE 2026","type":"Conference + Trade Fair","start_date":"2026-04-27","end_date":"2026-04-29","city":"Lima","country":"Peru","venue":"Jockey Exhibition Center","organizer":"EXPOCOBRE Peru","website":"https://expocobre.com/en","focus":["copper mining","innovation","Latin American mining supply chain"],"commodities":["copper"],"region":"Latin America","exhibitors":200,"status":"upcoming"},{"id":14,"name":"CIM CONNECT 2026 Convention + Expo","type":"Convention + Trade Show","start_date":"2026-05-03","end_date":"2026-05-06","city":"Vancouver","country":"Canada","venue":"Vancouver Convention Centre","organizer":"Canadian Institute of Mining, Metallurgy and Petroleum (CIM)","website":"https://convention.cim.org","focus":["mining equipment","automation","electrification","digital transformation","sustainability"],"commodities":["all"],"region":"North America","attendance":7000,"notes":"100th anniversary edition","status":"upcoming"},{"id":15,"name":"GRX26 — Global Resources Innovation Expo","type":"Conference + Expo","start_date":"2026-05-05","end_date":"2026-05-07","city":"Perth","country":"Australia","venue":"Perth Convention & Exhibition Centre","organizer":"AusIMM + Austmine","website":"https://www.grx.au","focus":["mine automation","energy transition","critical minerals","METS sector"],"commodities":["critical minerals","all"],"region":"Asia-Pacific","status":"upcoming"},{"id":16,"name":"The Electric Mine 2026","type":"Conference + Exhibition","start_date":"2026-05-05","end_date":"2026-05-07","city":"Lisbon","country":"Portugal","venue":"Lisbon Exhibition and Congress Centre (FIL)","organizer":"The Electric Mine","website":"https://www.theelectricmine.com","focus":["mine electrification","battery electric vehicles","zero-emission mining","decarbonisation"],"commodities":["all"],"region":"Europe","status":"upcoming"},{"id":17,"name":"121 Mining Investment Conference London","type":"Investment Conference","start_date":"2026-05-11","end_date":"2026-05-12","city":"London","country":"United Kingdom","venue":"London","organizer":"121 Group","website":"https://london.121mininginvestment.com/home","focus":["mining investment","exploration","development projects"],"commodities":["all"],"region":"Europe","status":"upcoming"},{"id":18,"name":"SAIMM Pyrometallurgy International Conference 2026","type":"Technical Conference","start_date":"2026-05-25","end_date":"2026-05-29","city":"Pretoria","country":"South Africa","venue":"CSIR","organizer":"Southern African Institute of Mining and Metallurgy (SAIMM)","website":"https://www.saimm.co.za/saimm-events/upcoming-events/saimm-pyrometallurgy-international-conference-2026","focus":["pyrometallurgy","smelting","furnace tapping","refractories"],"commodities":["all"],"region":"Africa","status":"upcoming"},{"id":19,"name":"Euro Mine Expo 2026","type":"Trade Fair + Conference","start_date":"2026-05-26","end_date":"2026-05-28","city":"Skellefteå","country":"Sweden","venue":"Skellefteå Kraft Arena","organizer":"Euro Mine Expo AB","website":"https://www.euromineexpo.com","focus":["mining technology","innovation","Nordic mining"],"commodities":["all"],"region":"Europe","notes":"Biennial event","status":"upcoming"},{"id":49,"name":"SIMPOSIO — XVI Encuentro Internacional de Minería","type":"Conference / International Forum","start_date":"2026-05-26","end_date":"2026-05-28","city":"Lima","country":"Peru","venue":"JW Marriott Hotel Lima","organizer":"SNMPE (Sociedad Nacional de Minería, Petróleo y Energía)","website":"https://www.simposio.pe/en/","focus":["public policy","energy transition","investment","sustainability","digitalization","talent management"],"commodities":["copper","gold","silver"],"region":"Latin America","notes":"Over 30 years of history; XVI edition","status":"upcoming"},{"id":20,"name":"Discoveries Mining Conference 2026 (12th Edition)","type":"Conference + Exhibition","start_date":"2026-05-26","end_date":"2026-05-28","city":"Mazatlán","country":"Mexico","venue":"Mazatlan International Center","organizer":"The Northern Miner / Discoveries Conference","website":"https://www.discoveriesconference.com","focus":["Latin American mining","geological discoveries","Mexican mining","investment"],"commodities":["gold","silver","copper"],"region":"Latin America","attendance":2000,"status":"upcoming"},{"id":21,"name":"Elko Mining Expo 2026","type":"Trade Expo","start_date":"2026-06-04","end_date":"2026-06-05","city":"Elko","country":"USA","venue":"Elko Convention & Conference Center","organizer":"Elko Convention & Visitors Authority / Nevada Mining Association","website":"https://exploreelko.com/top-events/elko-mining-expo","focus":["Nevada gold and silver mining","mining equipment","services and technology"],"commodities":["gold","silver"],"region":"North America","status":"upcoming"},{"id":22,"name":"EXPONOR 2026","type":"International Exhibition","start_date":"2026-06-08","end_date":"2026-06-11","city":"Antofagasta","country":"Chile","venue":"EXPONOR Fairground","organizer":"Industrial Association of Antofagasta (AIA)","website":"https://exponor.cl","focus":["mining and energy technologies","copper mining","lithium mining"],"commodities":["copper","lithium"],"region":"Latin America","notes":"Biennial event","status":"upcoming"},{"id":23,"name":"Canadian Mining Expo (CME) 2026","type":"Trade Expo + Conference","start_date":"2026-06-09","end_date":"2026-06-11","city":"Timmins","country":"Canada","venue":"McIntyre Complex","organizer":"Canadian Trade-Ex","website":"https://virtex.canadianminingexpo.com","focus":["Canadian mining","equipment","technology","First Nations Forum"],"commodities":["gold","all"],"region":"North America","attendance":5000,"exhibitors":400,"status":"upcoming"},{"id":24,"name":"DRC Mining Week 2026","type":"Conference + Exhibition","start_date":"2026-06-17","end_date":"2026-06-19","city":"Lubumbashi","country":"Democratic Republic of Congo","venue":"Pullman Lubumbashi Grand Karavia Hotel","organizer":"VUKA Group","website":"https://wearevuka.com/mining/drc-mining-week","focus":["copper","cobalt","critical minerals","DRC investment","ESG"],"commodities":["copper","cobalt","critical minerals"],"region":"Africa","attendance":1050,"exhibitors":280,"notes":"20th anniversary edition","status":"upcoming"},{"id":25,"name":"60th US Rock Mechanics / Geomechanics Symposium (ARMA 2026)","type":"Technical Symposium","start_date":"2026-06-21","end_date":"2026-06-24","city":"Tucson","country":"USA","venue":"Tucson, Arizona","organizer":"American Rock Mechanics Association (ARMA)","website":"https://armarocks.org/tucson-2026-symposium","focus":["rock mechanics","geomechanics","underground mining"],"commodities":["all"],"region":"North America","status":"upcoming"},{"id":26,"name":"Mining Asia Conference & Exhibition 2026 (11th Edition)","type":"Conference + Exhibition","start_date":"2026-06-23","end_date":"2026-06-24","city":"Singapore","country":"Singapore","venue":"Marina Bay Sands Expo & Convention Centre","organizer":"Mining Asia Convention","website":"https://www.miningasiaconvention.com","focus":["commodities","critical minerals","mining investment","clean energy"],"commodities":["all","critical minerals"],"region":"Asia","notes":"Southeast Asia's largest mining event","status":"upcoming"},{"id":27,"name":"Iron Ore | Open Pit Operators Conference 2026","type":"Technical Conference","start_date":"2026-06-23","end_date":"2026-06-25","city":"Perth","country":"Australia","venue":"Perth Convention and Exhibition Centre","organizer":"AusIMM","website":"https://www.ausimm.com/conferences-and-events/iron-ore-open-pit-2026","focus":["iron ore mining","open pit operations","processing","sustainability"],"commodities":["iron ore"],"region":"Asia-Pacific","status":"upcoming"},{"id":28,"name":"World Mining Congress (WMC) 2026 — 27th Edition","type":"Congress + Expo","start_date":"2026-06-24","end_date":"2026-06-26","city":"Lima","country":"Peru","venue":"Lima Convention Center","organizer":"World Mining Congress / IIMP","website":"https://wmc2026.org","focus":["global mining","technology","AI in mining","sustainability"],"commodities":["all"],"region":"Latin America","attendance":3000,"notes":"Theme: 'Mining for the Future: Technology, Trust, and Transformation'","status":"upcoming"},{"id":29,"name":"Diggers & Dealers Mining Forum 2026","type":"Investment Forum + Exhibition","start_date":"2026-08-03","end_date":"2026-08-05","city":"Kalgoorlie","country":"Australia","venue":"Goldfields Arts Centre","organizer":"Diggers & Dealers Forum","website":"https://www.diggersndealers.com.au","focus":["Australian mining investment","gold","base metals","corporate presentations"],"commodities":["gold","base metals"],"region":"Asia-Pacific","attendance":2600,"exhibitors":159,"status":"upcoming"},{"id":30,"name":"45th International Conference on Ground Control in Mining","type":"Technical Conference","start_date":"2026-08-10","end_date":"2026-08-11","city":"Charleston","country":"USA","venue":"Charleston, West Virginia","organizer":"WVU Safety & Health Extension","website":"https://www.smenet.org/events","focus":["ground control","mine safety","geomechanics","underground mining"],"commodities":["all"],"region":"North America","status":"upcoming"},{"id":31,"name":"Exposibram 2026 — Brazilian Mining Congress & Exhibition","type":"Congress + International Exhibition","start_date":"2026-08-24","end_date":"2026-08-27","city":"Belo Horizonte","country":"Brazil","venue":"EXPOMINAS BH","organizer":"IBRAM (Brazilian Mining Association)","website":"https://exposibram2026.ibram.org.br/en","focus":["Brazilian mining","Latin American mining","all sectors"],"commodities":["iron ore","gold","copper","all"],"region":"Latin America","attendance":86000,"exhibitors":600,"status":"upcoming"},{"id":32,"name":"10th Latin American Rock Mechanics Symposium (LARMS 2026)","type":"Technical Symposium","start_date":"2026-08-25","end_date":"2026-08-28","city":"Brasília","country":"Brazil","venue":"Brasília","organizer":"ISRM / Brazilian Committee","website":"https://larms2026.com","focus":["rock mechanics","sustainable mining","energy","infrastructure"],"commodities":["all"],"region":"Latin America","status":"upcoming"},{"id":33,"name":"Critical Minerals Conference 2026 (AusIMM)","type":"Technical Conference","start_date":"2026-09-20","end_date":"2026-09-23","city":"Brisbane","country":"Australia","venue":"Brisbane Convention and Exhibition Centre","organizer":"AusIMM","website":"https://www.ausimm.com/conferences-and-events/critical-minerals-2026","focus":["critical minerals","supply chain","geoscience","processing"],"commodities":["lithium","cobalt","rare earths","critical minerals"],"region":"Asia-Pacific","status":"upcoming"},{"id":34,"name":"XIX International Society of Mine Surveyors (ISM) Congress 2026","type":"Congress","start_date":"2026-09-22","end_date":"2026-09-25","city":"Cape Town","country":"South Africa","venue":"Century City","organizer":"International Society for Mine Surveying (ISM) / SAIMM","website":"https://www.saimm.co.za/saimm-events/upcoming-events/xix-2026-international-society-of-mine-surveyors-congress","focus":["mine surveying","mineral property management","rock movements","environmental rehabilitation"],"commodities":["all"],"region":"Africa","status":"upcoming"},{"id":35,"name":"Precious Metals Summit Beaver Creek 2026","type":"Investment Summit","start_date":"2026-09-22","end_date":"2026-09-25","city":"Beaver Creek","country":"USA","venue":"Beaver Creek Resort, Colorado","organizer":"Precious Metals Summit Conferences","website":"https://www.precioussummit.com/events/2026-precious-metals-summit-beaver-creek","focus":["gold","silver","precious metals investment","exploration and production"],"commodities":["gold","silver","platinum","palladium"],"region":"North America","status":"upcoming"},{"id":36,"name":"Mining Forum Americas 2026","type":"Investment Forum","start_date":"2026-09-27","end_date":"2026-09-30","city":"Colorado Springs","country":"USA","venue":"The Broadmoor Hotel & Resort","organizer":"Denver Gold Group","website":"https://americas.miningforum.com","focus":["precious metals equities","gold investment","silver investment"],"commodities":["gold","silver"],"region":"North America","status":"upcoming"},{"id":37,"name":"12th International Congress on Tailings Management 2026","type":"Technical Congress","start_date":"2026-09-29","end_date":"2026-10-01","city":"Santiago","country":"Chile","venue":"Sheraton Santiago Hotel","organizer":"Tailings and Mine Waste Conference Series","website":"https://tailingsandminewaste.com","focus":["tailings geotechnical engineering","environmental management","regulatory compliance","mine waste"],"commodities":["all"],"region":"Latin America","status":"upcoming"},{"id":38,"name":"LBMA/LPPM Global Precious Metals Conference 2026","type":"Conference","start_date":"2026-10-04","end_date":"2026-10-06","city":"Sorrento","country":"Italy","venue":"Hilton Sorrento Palace","organizer":"London Bullion Market Association (LBMA) + London Platinum & Palladium Market (LPPM)","website":"https://www.lbma.org.uk/events/lbma-lppm-global-precious-metals-conference-2026","focus":["gold","silver","platinum","palladium markets","responsible sourcing","market integrity"],"commodities":["gold","silver","platinum","palladium"],"region":"Europe","status":"upcoming"},{"id":39,"name":"121 Mining Investment Online 2026","type":"Virtual Conference","start_date":"2026-10-13","end_date":"2026-10-14","city":"Online","country":"Global","venue":"Online","organizer":"121 Group","website":"https://online.121mininginvestment.com/home","focus":["mining investment","virtual one-on-one meetings","global investor access"],"commodities":["all"],"region":"Global","status":"upcoming"},{"id":40,"name":"African Mining Week 2026","type":"Conference + Exhibition","start_date":"2026-10-14","end_date":"2026-10-16","city":"Cape Town","country":"South Africa","venue":"Cape Town International Convention Centre (CTICC)","organizer":"Energy Capital & Power","website":"https://african-miningweek.com","focus":["African critical minerals","cobalt","lithium","copper","rare earths","ESG","investment"],"commodities":["cobalt","lithium","copper","rare earths"],"region":"Africa","status":"upcoming"},{"id":41,"name":"XXXII International Mineral Processing Congress (IMPC 2026)","type":"Congress","start_date":"2026-10-18","end_date":"2026-10-22","city":"Cape Town","country":"South Africa","venue":"Cape Town International Convention Centre (CTICC)","organizer":"Southern African Institute of Mining and Metallurgy (SAIMM)","website":"https://impc2026.com","focus":["mineral processing","flotation","comminution","hydrometallurgy","sustainability"],"commodities":["all"],"region":"Africa","attendance":1000,"status":"upcoming"},{"id":42,"name":"Mining & Critical Minerals Europe Conference & Exhibition 2026","type":"Conference + Exhibition","start_date":"2026-10-20","end_date":"2026-10-21","city":"London","country":"United Kingdom","venue":"Hilton London Metropole","organizer":"Mining Europe Convention","website":"https://www.miningeuropeconvention.com","focus":["critical minerals","European supply chain","mining investment","clean energy technology"],"commodities":["critical minerals"],"region":"Europe","attendance":200,"status":"upcoming"},{"id":43,"name":"IMARC 2026 — International Mining and Resources Conference + Expo","type":"Conference + Expo","start_date":"2026-10-27","end_date":"2026-10-29","city":"Sydney","country":"Australia","venue":"Sydney","organizer":"IMARC Global","website":"https://imarcglobal.com","focus":["mining value chain","investment","technology","critical minerals","sustainability"],"commodities":["all"],"region":"Asia-Pacific","notes":"6 concurrent conferences, 120+ countries represented","status":"upcoming"},{"id":44,"name":"AIMEX 2026 — Asia-Pacific's International Mining Exhibition","type":"Trade Exhibition + Conference","start_date":"2026-10-27","end_date":"2026-10-29","city":"Sydney","country":"Australia","venue":"Sydney Showground, Sydney Olympic Park","organizer":"Reed Exhibitions","website":"https://www.aimex.com.au","focus":["mining technology","equipment","services","decarbonisation"],"commodities":["all"],"region":"Asia-Pacific","notes":"Australia's longest-running mining show","status":"upcoming"},{"id":45,"name":"Strategic Mine Planning Conference 2026 (AusIMM)","type":"Technical Conference","start_date":"2026-11-17","end_date":"2026-11-19","city":"Perth","country":"Australia","venue":"Residence on Langley Park","organizer":"AusIMM","website":"https://www.ausimm.com/conferences-and-events/Strategic-Mine-Planning","focus":["strategic mine planning","orebody modelling","mine optimisation"],"commodities":["all"],"region":"Asia-Pacific","status":"upcoming"},{"id":46,"name":"14th Asian Rock Mechanics Symposium (ARMS14)","type":"Technical Symposium","start_date":"2026-11-22","end_date":"2026-11-26","city":"Fukuoka","country":"Japan","venue":"Fukuoka","organizer":"ISRM / Japanese Committee","website":"https://isrm.net/conference/show/6382","focus":["rock mechanics","underground engineering","sustainability","resilience"],"commodities":["all"],"region":"Asia","status":"upcoming"},{"id":47,"name":"bauma CHINA 2026","type":"International Trade Fair","start_date":"2026-11-24","end_date":"2026-11-27","city":"Shanghai","country":"China","venue":"Shanghai New International Expo Centre","organizer":"Messe München / bauma CHINA","website":"https://bauma-china.com/en","focus":["construction machinery","mining machines","construction vehicles"],"commodities":["all"],"region":"Asia","attendance":281000,"status":"upcoming"},{"id":48,"name":"Mines and Money @ Resourcing Tomorrow London 2026","type":"Conference + Investment Forum","start_date":"2026-12-01","end_date":"2026-12-03","city":"London","country":"United Kingdom","venue":"London","organizer":"Resourcing Tomorrow / Mines and Money","website":"https://minesandmoney.com/london","focus":["mining investment","exploration","energy transition","critical minerals"],"commodities":["all"],"region":"Europe","notes":"Europe's largest mining investment event","status":"upcoming"},{"id":50,"name":"Congreso y Exposición Internacional Argentina Metales Preciosos y No Ferrosos 2026","type":"Congress + Exhibition","start_date":"2026-03-18","end_date":"2026-03-19","city":"Buenos Aires","country":"Argentina","venue":"Buenos Aires","organizer":"Vostock Capital","website":"https://metalsargentina.com","focus":["technology and operational efficiency","sustainability","investment","project optimization","energy infrastructure"],"commodities":["gold","silver","lithium","copper"],"region":"Latin America","attendance":200,"notes":"45+ mining projects showcased; 40+ expert speakers","status":"upcoming"},{"id":51,"name":"San Juan International Mining Expo (Expo San Juan Minera)","type":"Exhibition + Conference","start_date":"2026-05-06","end_date":"2026-05-08","city":"San Juan","country":"Argentina","venue":"San Juan","organizer":"Panorama Minero","website":"https://www.exposanjuan.com.ar/en","focus":["mining innovation","equipment and machinery","technology","business networking"],"commodities":["copper","gold","lithium","silver"],"region":"Latin America","attendance":25000,"exhibitors":300,"notes":"200+ exhibition stands; 40+ mining companies; 20+ countries represented","status":"upcoming"},{"id":52,"name":"Argentina Rocks — Mining Exploration Congress","type":"Congress / Conference","start_date":"2026-05-27","end_date":"2026-05-28","city":"Mendoza","country":"Argentina","venue":"Hotel Sheraton Mendoza","organizer":"Latin Rocks","website":"https://argentinarocks.com.ar","focus":["mineral exploration geology","copper porphyry systems","epithermal precious metal deposits","Andean geology","applied geochemistry"],"commodities":["copper","gold","silver"],"region":"Latin America","notes":"Includes field excursion to San Juan (May 21-25) and workshops (May 26, 29)","status":"upcoming"},{"id":53,"name":"Direct Lithium Extraction Argentina 2026 (3rd Annual)","type":"Conference","start_date":"2026-09-21","end_date":"2026-09-22","city":"Buenos Aires","country":"Argentina","venue":"Buenos Aires","organizer":"IQ International","website":"https://www.argentina.direct-lithium-extraction-show.com","focus":["direct lithium extraction","brine exploration","energy transition","extraction plant optimization","regulatory compliance"],"commodities":["lithium"],"region":"Latin America","notes":"Participants include Tecpetrol, Oxy, Rio Tinto, Stellantis, Albemarle","status":"upcoming"},{"id":54,"name":"Argentina Week 2026 — New York","type":"Commercial & Investment Mission","start_date":"2026-03-09","end_date":"2026-03-12","city":"New York","country":"USA","venue":"Consulate General of Argentina, 12 West 56th Street","organizer":"IDEA (Instituto para el Desarrollo Empresarial de la Argentina) + U.S. Chamber of Commerce","website":"https://www.idea.org.ar/argentina-week-2026/","focus":["critical minerals","lithium","copper","mining investment","RIGI large investment incentive regime","legal certainty"],"commodities":["lithium","copper","gold","silver","critical minerals"],"region":"North America","notes":"Includes Strategic Mining & Critical Minerals Panel (Mar 12); governors of San Juan, Catamarca, Jujuy, Salta, Santa Cruz attended","status":"past"}]};
+
+const events = DB.events;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function typeClass(t) {
+  const l = t.toLowerCase();
+  if (l.includes('invest') || l.includes('summit') || l.includes('forum')) return 'type-investment';
+  if (l.includes('technical') || l.includes('symposium')) return 'type-technical';
+  if (l.includes('trade') || l.includes('expo') || l.includes('exhibition') || l.includes('fair')) return 'type-trade';
+  if (l.includes('congress')) return 'type-congress';
+  return '';
+}
+function fmt(d) {
+  const [,m,day] = d.split('-');
+  return `${MONTHS[+m-1]} ${+day}`;
+}
+function fmtRange(s, e) {
+  const sm = +s.split('-')[1], em = +e.split('-')[1];
+  return sm === em ? `${fmt(s)} – ${fmt(e)}` : `${fmt(s)} – ${fmt(e)}`;
+}
+function count(arr, key) {
+  const m = {};
+  arr.forEach(ev => {
+    const v = typeof key === 'function' ? key(ev) : ev[key];
+    const vals = Array.isArray(v) ? v : [v];
+    vals.forEach(x => { m[x] = (m[x] || 0) + 1; });
+  });
+  return m;
+}
+
+// ── Stat cards ────────────────────────────────────────────────────────────────
+function buildStats() {
+  const upcoming = events.filter(e => e.status === 'upcoming').length;
+  const past     = events.filter(e => e.status === 'past').length;
+  const regions  = new Set(events.map(e => e.region)).size;
+  const countries= new Set(events.map(e => e.country)).size;
+  const maxAtt   = Math.max(...events.filter(e=>e.attendance).map(e=>e.attendance));
+  const cards = [
+    { label: 'Total Events',    value: events.length, sub: 'all 2026',         cls: 'c-accent' },
+    { label: 'Upcoming',        value: upcoming,       sub: 'still ahead',      cls: 'c-green' },
+    { label: 'Past',            value: past,           sub: 'already occurred', cls: 'c-muted' },
+    { label: 'Regions',         value: regions,        sub: 'worldwide',        cls: 'c-blue' },
+    { label: 'Countries',       value: countries,      sub: 'host nations',     cls: 'c-accent' },
+    { label: 'Largest Event',   value: maxAtt.toLocaleString(), sub: 'attendees (bauma CHINA)', cls: 'c-blue' },
+  ];
+  document.getElementById('stat-cards').innerHTML = cards.map(c =>
+    `<div class="stat-card"><div class="label">${c.label}</div><div class="value ${c.cls}">${c.value}</div><div class="sub">${c.sub}</div></div>`
+  ).join('');
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+const PALETTE = ['#f5a623','#4f8ef7','#3ecf8e','#c084fc','#f16c6c','#facc15','#22d3ee','#a3e635','#fb923c'];
+const GRID_COLOR = 'rgba(255,255,255,0.06)';
+Chart.defaults.color = '#7b82a0';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+function buildCharts() {
+  // Region doughnut
+  const rc = count(events, 'region');
+  new Chart(document.getElementById('chartRegion'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(rc),
+      datasets: [{ data: Object.values(rc), backgroundColor: PALETTE, borderWidth: 0 }]
+    },
+    options: { plugins: { legend: { position: 'right', labels: { boxWidth: 12, padding: 8 } } }, cutout: '60%', maintainAspectRatio: false }
+  });
+
+  // Month bar
+  const mc = {};
+  MONTHS.forEach(m => mc[m] = 0);
+  events.forEach(e => { const m = MONTHS[+e.start_date.split('-')[1] - 1]; mc[m]++; });
+  const barColors = Object.keys(mc).map(m => {
+    const idx = MONTHS.indexOf(m);
+    const d = new Date(2026, idx, 1);
+    return d <= new Date() ? 'rgba(123,130,160,0.5)' : '#4f8ef7';
+  });
+  new Chart(document.getElementById('chartMonth'), {
+    type: 'bar',
+    data: {
+      labels: MONTHS,
+      datasets: [{ data: Object.values(mc), backgroundColor: barColors, borderRadius: 4 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: GRID_COLOR }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: GRID_COLOR }, ticks: { stepSize: 1 } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+
+  // Commodity horizontal bar
+  const cc = {};
+  events.forEach(e => e.commodities.forEach(c => { cc[c] = (cc[c]||0)+1; }));
+  const sorted = Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  new Chart(document.getElementById('chartCommodity'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([k])=>k),
+      datasets: [{ data: sorted.map(([,v])=>v), backgroundColor: '#3ecf8e', borderRadius: 4, barThickness: 14 }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: GRID_COLOR } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      },
+      maintainAspectRatio: false
+    }
+  });
+}
+
+// ── Timeline ──────────────────────────────────────────────────────────────────
+function buildTimeline() {
+  const tl = document.getElementById('timeline');
+  const byMonth = {};
+  for (let i = 0; i < 12; i++) byMonth[i] = [];
+  events.forEach(e => { byMonth[+e.start_date.split('-')[1] - 1].push(e); });
+  tl.innerHTML = Array.from({length:12}, (_,i) => {
+    const evs = byMonth[i];
+    return `<div class="tl-month">
+      <div class="tl-month-label">${MONTHS[i]}</div>
+      ${evs.map(e => `<div class="tl-event ${e.status} ${typeClass(e.type)}" title="${e.name}" onclick="openModal(${e.id})">${e.name.replace(/ \d{4}$/,'').slice(0,28)}</div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+let filtered = [...events];
+let sortKey = 'start_date', sortDir = 1;
+let page = 1;
+const PER_PAGE = 15;
+
+// Populate filter dropdowns
+function populateFilters() {
+  const regions = [...new Set(events.map(e=>e.region))].sort();
+  const types   = [...new Set(events.map(e=>e.type))].sort();
+  const comms   = [...new Set(events.flatMap(e=>e.commodities))].sort();
+  const rSel = document.getElementById('filterRegion');
+  const tSel = document.getElementById('filterType');
+  const cSel = document.getElementById('filterCommodity');
+  regions.forEach(r => { const o = document.createElement('option'); o.value=r; o.textContent=r; rSel.appendChild(o); });
+  types.forEach(t   => { const o = document.createElement('option'); o.value=t; o.textContent=t; tSel.appendChild(o); });
+  comms.forEach(c   => { const o = document.createElement('option'); o.value=c; o.textContent=c; cSel.appendChild(o); });
+}
+
+function applyFilters() {
+  const q  = document.getElementById('search').value.toLowerCase();
+  const rg = document.getElementById('filterRegion').value;
+  const tp = document.getElementById('filterType').value;
+  const st = document.getElementById('filterStatus').value;
+  const cm = document.getElementById('filterCommodity').value;
+  filtered = events.filter(e => {
+    if (rg && e.region !== rg) return false;
+    if (tp && e.type   !== tp) return false;
+    if (st && e.status !== st) return false;
+    if (cm && !e.commodities.includes(cm)) return false;
+    if (q) {
+      const hay = [e.name, e.city, e.country, e.organizer, e.type, ...(e.focus||[])].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  filtered.sort((a,b) => {
+    let av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    return sortDir * (av < bv ? -1 : av > bv ? 1 : 0);
+  });
+  page = 1;
+  renderTable();
+}
+
+function buildTableHead() {
+  const cols = [
+    { key: 'name',       label: 'Event' },
+    { key: 'start_date', label: 'Date' },
+    { key: 'city',       label: 'Location' },
+    { key: 'region',     label: 'Region' },
+    { key: 'status',     label: 'Status' },
+    { key: null,         label: 'Focus' },
+  ];
+  document.getElementById('table-head').innerHTML = `<tr>${cols.map(c =>
+    `<th class="${sortKey===c.key?'sorted':''}" ${c.key?`onclick="setSort('${c.key}')"`:''}>${c.label}${c.key?`<span class="sort-icon">${sortKey===c.key?(sortDir>0?'↑':'↓'):'↕'}</span>`:''}</th>`
+  ).join('')}</tr>`;
+}
+
+function renderTable() {
+  buildTableHead();
+  const total = filtered.length;
+  const pages = Math.ceil(total / PER_PAGE);
+  const slice = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
+  document.getElementById('filter-count').textContent = `${total} event${total!==1?'s':''}`;
+  document.getElementById('table-body').innerHTML = slice.map(e => `
+    <tr onclick="openModal(${e.id})">
+      <td class="name-cell"><div class="event-name">${e.name}</div><div class="event-type">${e.type}</div></td>
+      <td class="date-cell">${fmtRange(e.start_date, e.end_date)}</td>
+      <td class="loc-cell">${e.city}<br><span style="color:var(--muted)">${e.country}</span></td>
+      <td><span class="pill">${e.region}</span></td>
+      <td><span class="pill ${e.status}">${e.status}</span></td>
+      <td>${(e.focus||[]).slice(0,2).map(f=>`<span class="pill">${f}</span>`).join('')}</td>
+    </tr>`
+  ).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No events match your filters.</td></tr>';
+  // pagination
+  const pg = document.getElementById('pagination');
+  if (pages <= 1) { pg.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= pages; i++) {
+    html += `<button class="${i===page?'active':''}" onclick="gotoPage(${i})">${i}</button>`;
+  }
+  pg.innerHTML = html;
+}
+
+function setSort(key) {
+  if (sortKey === key) sortDir = -sortDir;
+  else { sortKey = key; sortDir = 1; }
+  applyFilters();
+}
+function gotoPage(p) { page = p; renderTable(); window.scrollTo({top: document.querySelector('.filters').offsetTop - 20, behavior:'smooth'}); }
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const e = events.find(x => x.id === id);
+  if (!e) return;
+  const att = e.attendance ? `<strong>${e.attendance.toLocaleString()}</strong>` : '—';
+  const exh = e.exhibitors  ? `<strong>${e.exhibitors.toLocaleString()}</strong>` : '—';
+  document.getElementById('modal-content').innerHTML = `
+    <h2>${e.name}</h2>
+    <div class="modal-type">${e.type} &nbsp;•&nbsp; <span class="pill ${e.status}">${e.status}</span></div>
+    <div class="grid2">
+      <div class="field"><label>Dates</label><p>${fmtRange(e.start_date, e.end_date)}, 2026</p></div>
+      <div class="field"><label>Venue</label><p>${e.venue}</p></div>
+      <div class="field"><label>City</label><p>${e.city}, ${e.country}</p></div>
+      <div class="field"><label>Region</label><p>${e.region}</p></div>
+      <div class="field"><label>Organizer</label><p>${e.organizer}</p></div>
+      <div class="field"><label>Attendance / Exhibitors</label><p>${att} / ${exh}</p></div>
+    </div>
+    <div class="field" style="margin-bottom:12px"><label>Focus Areas</label><div class="tags">${(e.focus||[]).map(f=>`<span class="pill">${f}</span>`).join('')}</div></div>
+    <div class="field" style="margin-bottom:12px"><label>Commodities</label><div class="tags">${e.commodities.map(c=>`<span class="pill" style="border-color:var(--accent);color:var(--accent)">${c}</span>`).join('')}</div></div>
+    ${e.notes ? `<div class="field" style="margin-bottom:12px"><label>Notes</label><p style="color:var(--accent)">${e.notes}</p></div>` : ''}
+    <div style="margin-top:16px"><a href="${e.website}" target="_blank" rel="noopener">🔗 ${e.website}</a></div>
+  `;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(ev) {
+  if (!ev || ev.target === document.getElementById('overlay')) {
+    document.getElementById('overlay').classList.remove('open');
+  }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildStats();
+buildCharts();
+buildTimeline();
+populateFilters();
+applyFilters();
+['search','filterRegion','filterType','filterStatus','filterCommodity'].forEach(id => {
+  document.getElementById(id).addEventListener('input', applyFilters);
+});
+document.getElementById('badge-total').textContent = `${events.length} Events`;
+</script>
+</body>
+</html>

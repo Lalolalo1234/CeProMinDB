@@ -1,5 +1,7 @@
 # CeProMinDB — Mining Events Database 2026
 
+**Last updated: March 12, 2026**
+
 A curated JSON database of global mining conferences, exhibitions, symposiums, and investment forums for 2026, with an interactive HTML dashboard for visualization.
 
 ## Contents
@@ -74,5 +76,3 @@ Event data sourced from official event websites, industry publications, and orga
 - Individual event websites listed in each record
 
 ---
-
-*Last updated: March 12, 2026*

@@ -1,6 +1,6 @@
 # CeProMinDB — Mining Events Database 2026
 
-**Last updated: March 12, 2026**
+**Last updated: June 2, 2026**
 
 A curated JSON database of global mining conferences, exhibitions, symposiums, and investment forums for 2026, with an interactive HTML dashboard for visualization.
 
@@ -8,7 +8,7 @@ A curated JSON database of global mining conferences, exhibitions, symposiums, a
 
 | File | Description |
 |---|---|
-| `mining_events.json` | Source database — 54 events with full metadata |
+| `mining_events.json` | Source database — 60 events with full metadata |
 | `index.html` | Self-contained interactive dashboard (no build step) |
 
 ## Dashboard Features
@@ -58,7 +58,7 @@ Each event in `mining_events.json` follows this structure:
 
 ## Coverage
 
-**54 events** across 6 regions and 25+ countries — January through December 2026.
+**60 events** across 7 regions and 25+ countries — January through December 2026.
 
 Highlights:
 - **Largest event:** bauma CHINA 2026 — 281,000 attendees (Shanghai, Nov)
